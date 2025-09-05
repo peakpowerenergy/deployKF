@@ -275,7 +275,7 @@ spec:
     {{- end }}
 
     ################################################################################
-    ## FILTER 4 - Set USERID_HEADER from `x-auth-request-email`
+    ## FILTER 4 - Extract OIDC groups from JWT token
     ################################################################################
     {{- range $port_number := $listner_port_numbers }}
     {{- "\n" }}
@@ -289,9 +289,68 @@ spec:
             filter:
               name: envoy.filters.network.http_connection_manager
               subFilter:
-                name: envoy.filters.http.deploykf.jwt_authn
+                name: envoy.filters.http.deploykf.ext_authz
       patch:
-        ## insert right AFTER the `envoy.filters.http.deploykf.jwt_authn` filter
+        ## insert right AFTER the `envoy.filters.http.deploykf.ext_authz` filter
+        operation: INSERT_AFTER
+        value:
+          name: envoy.filters.http.deploykf.extract_groups
+          typed_config:
+            ## https://www.envoyproxy.io/docs/envoy/v1.23.1/api-v3/extensions/filters/http/lua/v3/lua.proto
+            ## https://www.envoyproxy.io/docs/envoy/v1.23.1/configuration/http/http_filters/lua_filter
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+
+            ## by default, do nothing
+            default_source_code:
+              inline_string: |
+                function envoy_on_request(request_handle)
+                  -- empty lua function
+                end
+
+            ## in our LuaPerRoute filters, we choose which source code to use for the route
+            source_codes:
+
+              ## SOURCE CODE 1:
+              ##  - extract groups from X-Auth-Request-Groups header and set as headers
+              extract_groups.lua:
+                inline_string: |
+                  function envoy_on_request(request_handle)
+                    -- extract groups from X-Auth-Request-Groups header (set by oauth2-proxy)
+                    local x_auth_request_groups = request_handle:headers():get("x-auth-request-groups")
+                    
+                    if x_auth_request_groups and x_auth_request_groups ~= "" then
+                      -- set kubeflow-groups header with comma-separated values
+                      request_handle:headers():replace("kubeflow-groups", x_auth_request_groups)
+                      
+                      -- also set individual headers for each group for easier AuthorizationPolicy matching
+                      for group in string.gmatch(x_auth_request_groups, "([^,]+)") do
+                        group = group:match("^%s*(.-)%s*$")  -- trim whitespace
+                        if group ~= "" then
+                          request_handle:headers():replace("kubeflow-group-" .. group, "true")
+                        end
+                      end
+                    end
+                  end
+    {{- end }}
+
+    ################################################################################
+    ## FILTER 5 - Set USERID_HEADER from `x-auth-request-email`
+    ################################################################################
+    {{- range $port_number := $listner_port_numbers }}
+    {{- "\n" }}
+    ## for port {{ $port_number }}
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          portNumber: {{ $port_number }}
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.deploykf.extract_groups
+      patch:
+        ## insert right AFTER the `envoy.filters.http.deploykf.extract_groups` filter
         operation: INSERT_AFTER
         value:
           name: envoy.filters.http.deploykf.set_userid_header
@@ -368,6 +427,11 @@ spec:
               "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
               requirement_name: oauth2_proxy
 
+            ## the Lua filter that extracts groups is called "envoy.filters.http.deploykf.extract_groups"
+            envoy.filters.http.deploykf.extract_groups:
+              ## https://www.envoyproxy.io/docs/envoy/v1.23.1/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute
+              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+              name: extract_groups.lua
             ## the Lua filter that sets USERID_HEADER is called "envoy.filters.http.deploykf.set_userid_header"
             envoy.filters.http.deploykf.set_userid_header:
               ## https://www.envoyproxy.io/docs/envoy/v1.23.1/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute
@@ -441,8 +505,11 @@ spec:
 
             ## disable the JwtAuthn filter
             envoy.filters.http.deploykf.jwt_authn:
-              ## https://www.envoyproxy.io/docs/envoy/v1.23.1/api-v3/extensions/filters/http/jwt_authn/v3/config.proto#extensions-filters-http-jwt-authn-v3-perrouteconfig
-              "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+
+            ## disable the Lua filter that extracts groups
+            envoy.filters.http.deploykf.extract_groups:
+              ## https://www.envoyproxy.io/docs/envoy/v1.23.1/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute
+              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
               disabled: true
 
             ## disable the Lua filter that sets USERID_HEADER

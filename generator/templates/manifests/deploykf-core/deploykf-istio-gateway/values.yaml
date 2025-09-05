@@ -21,6 +21,7 @@ deployKF:
   kubeflow:
     namespace: kubeflow
     useridHeader: kubeflow-userid
+    groupsClaim: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.groupsClaim | default "groups" | quote >}}
     pipelines:
       enabled: {{< .Values.kubeflow_tools.pipelines.enabled | conv.ToBool >}}
       kfpV2:
