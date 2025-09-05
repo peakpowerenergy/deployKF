@@ -1,7 +1,93 @@
 {{- /* loop over profiles */ -}}
 {{- range $profile_name, $users_access_mapping := .Values.deployKF_helpers.deploykf_profiles.profiles_users_access_mapping }}
 
-{{- /* loop over users with access to the profile */ -}}
+{{- /* collect groups that have access to this profile */ -}}
+{{- $profile_groups := dict -}}
+{{- range $user_id, $user_access := $users_access_mapping -}}
+  {{- $user := get $.Values.deployKF_helpers.deploykf_profiles.users_id_mapping $user_id -}}
+  {{- range $group_id, $group_users := $.Values.deployKF_helpers.deploykf_profiles.groups_id_mapping -}}
+    {{- if hasKey $group_users $user_id -}}
+      {{- if hasKey $profile_groups $group_id -}}
+        {{- $existing_access := index $profile_groups $group_id -}}
+        {{- /* upgrade role to 'edit' if applicable */ -}}
+        {{- if and (eq $existing_access.role "view") (eq $user_access.role "edit") -}}
+          {{- $existing_access = coll.Merge (dict "role" "edit") $existing_access -}}
+        {{- end -}}
+        {{- /* upgrade notebooksAccess to true if applicable */ -}}
+        {{- if and (eq $existing_access.notebooksAccess false) (eq $user_access.notebooksAccess true) -}}
+          {{- $existing_access = coll.Merge (dict "notebooksAccess" true) $existing_access -}}
+        {{- end -}}
+        {{- $profile_groups = coll.Merge (dict $group_id $existing_access) $profile_groups -}}
+      {{- else -}}
+        {{- $profile_groups = coll.Merge (dict $group_id $user_access) $profile_groups -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* create AuthorizationPolicies for groups */ -}}
+{{- range $group_id, $group_access := $profile_groups }}
+{{- $resource_name := regexReplaceAll "[^0-9a-zA-Z]" $group_id "-" | lower }}
+---
+{{- if or $group_access.notebooksAccess $.Values.deployKF.kubeflow.pipelines.enabled }}
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: group-{{ $resource_name }}-clusterrole-{{ $group_access.role }}
+  namespace: {{ $profile_name | quote }}
+  annotations:
+    role: {{ $group_access.role | quote }}
+    group: {{ $group_id | quote }}
+  labels:
+    helm.sh/chart: {{ include "deploykf-profiles-generator.labels.chart" $ }}
+    app.kubernetes.io/name: {{ include "deploykf-profiles-generator.labels.name" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+spec:
+  rules:
+    ## allow requests from `deploykf-istio-gateway` Pods with this group in the `kubeflow-groups` header
+    - from:
+        - source:
+            principals:
+              {{- if $group_access.notebooksAccess }}
+              ## allowing traffic from the gateway is what allows the user to access the notebooks
+              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.gateway.namespace }}/sa/{{ $.Values.deployKF.gateway.serviceAccount }}"
+              {{- end }}
+              {{- if $.Values.deployKF.kubeflow.pipelines.enabled }}
+              ## allowing traffic from `ml-pipeline-ui` is what allows the user to see KFP object store artifacts,
+              ## this is because it proxies the user's requests to `ml-pipeline-ui-artifact` in the profile namespace
+              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
+              {{- end }}
+      when:
+        - key: request.headers[kubeflow-group-{{ $group_id }}]
+          values:
+            - "true"
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: group-{{ $resource_name }}-clusterrole-{{ $group_access.role }}
+  namespace: {{ $profile_name | quote }}
+  annotations:
+    role: {{ $group_access.role | quote }}
+    group: {{ $group_id | quote }}
+  labels:
+    helm.sh/chart: {{ include "deploykf-profiles-generator.labels.chart" $ }}
+    app.kubernetes.io/name: {{ include "deploykf-profiles-generator.labels.name" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubeflow-{{ $group_access.role }}
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: {{ $group_id | quote }}
+{{- end }}
+
+{{- /* create AuthorizationPolicies for individual users (fallback) */ -}}
 {{- range $user_id, $user_access := $users_access_mapping }}
 
 {{- /* get the user object */ -}}

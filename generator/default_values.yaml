@@ -785,6 +785,13 @@ deploykf_core:
       ##
       emailToLowercase: false
 
+      ## the OIDC claim name that contains the user's groups
+      ##  - this is used by the gateway to extract group information from JWT tokens
+      ##    for authorization decisions in Kubeflow profiles
+      ##  - common values: "groups", "memberOf", "roles", etc.
+      ##  - if empty or not present in the JWT, group-based authorization will be skipped
+      ##
+      groupsClaim: "groups"
     ## istio gateway deployment configs
     ##
     gatewayDeployment:
