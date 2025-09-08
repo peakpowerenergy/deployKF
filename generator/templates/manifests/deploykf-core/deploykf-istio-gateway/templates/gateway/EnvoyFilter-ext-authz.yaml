@@ -289,9 +289,9 @@ spec:
             filter:
               name: envoy.filters.network.http_connection_manager
               subFilter:
-                name: envoy.filters.http.deploykf.ext_authz
+                name: envoy.filters.http.deploykf.jwt_authn
       patch:
-        ## insert right AFTER the `envoy.filters.http.deploykf.ext_authz` filter
+        ## insert right AFTER the `envoy.filters.http.deploykf.jwt_authn` filter
         operation: INSERT_AFTER
         value:
           name: envoy.filters.http.deploykf.extract_groups
