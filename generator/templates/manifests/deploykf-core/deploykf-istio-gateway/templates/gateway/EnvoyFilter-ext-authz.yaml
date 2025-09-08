@@ -505,6 +505,8 @@ spec:
 
             ## disable the JwtAuthn filter
             envoy.filters.http.deploykf.jwt_authn:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+              disabled: true  
 
             ## disable the Lua filter that extracts groups
             envoy.filters.http.deploykf.extract_groups:
