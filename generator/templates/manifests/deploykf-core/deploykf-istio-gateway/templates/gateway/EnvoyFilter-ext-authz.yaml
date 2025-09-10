@@ -171,6 +171,8 @@ spec:
                       ignore_case: true
                     - exact: x-auth-request-email
                       ignore_case: true
+                    - exact: x-auth-request-groups
+                      ignore_case: true
 
                 ## headers from oauth2-proxy that are sent back in the client response (on authentication failure)
                 ## NOTE: envoy automatically adds: `Path`, `Status`, `Content-Length`, `WWWAuthenticate`, `Location`
