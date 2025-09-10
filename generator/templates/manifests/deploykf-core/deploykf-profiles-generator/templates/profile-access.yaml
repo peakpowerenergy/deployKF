@@ -11,15 +11,15 @@
         {{- $existing_access := index $profile_groups $group_id -}}
         {{- /* upgrade role to 'edit' if applicable */ -}}
         {{- if and (eq $existing_access.role "view") (eq $user_access.role "edit") -}}
-          {{- $existing_access = coll.Merge (dict "role" "edit") $existing_access -}}
+          {{- $existing_access = merge $existing_access (dict "role" "edit") -}}
         {{- end -}}
         {{- /* upgrade notebooksAccess to true if applicable */ -}}
         {{- if and (eq $existing_access.notebooksAccess false) (eq $user_access.notebooksAccess true) -}}
-          {{- $existing_access = coll.Merge (dict "notebooksAccess" true) $existing_access -}}
+          {{- $existing_access = merge $existing_access (dict "notebooksAccess" true) -}}
         {{- end -}}
-        {{- $profile_groups = coll.Merge (dict $group_id $existing_access) $profile_groups -}}
+        {{- $profile_groups = merge $profile_groups (dict $group_id $existing_access) -}}
       {{- else -}}
-        {{- $profile_groups = coll.Merge (dict $group_id $user_access) $profile_groups -}}
+        {{- $profile_groups = merge $profile_groups (dict $group_id $user_access) -}}
       {{- end -}}
     {{- end -}}
   {{- end -}}
