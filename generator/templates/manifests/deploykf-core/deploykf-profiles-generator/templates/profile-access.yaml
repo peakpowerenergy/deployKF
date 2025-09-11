@@ -85,12 +85,12 @@ spec:
             principals:
               {{- if $group_access.notebooksAccess }}
               ## allowing traffic from the gateway is what allows the user to access the notebooks
-              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.gateway.namespace }}/sa/{{ $.Values.deployKF.gateway.serviceAccount }}"
+              - "spiffe://{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.gateway.namespace }}/sa/{{ $.Values.deployKF.gateway.serviceAccount }}"
               {{- end }}
               {{- if $.Values.deployKF.kubeflow.pipelines.enabled }}
               ## allowing traffic from `ml-pipeline-ui` is what allows the user to see KFP object store artifacts,
               ## this is because it proxies the user's requests to `ml-pipeline-ui-artifact` in the profile namespace
-              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
+              - "spiffe://{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
               {{- end }}
       when:
         - key: request.auth.claims[{{ $.Values.deployKF.gateway.groupsClaim }}]
@@ -148,12 +148,12 @@ spec:
             principals:
               {{- if $group_access.notebooksAccess }}
               ## allowing traffic from the gateway is what allows the user to access the notebooks
-              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.gateway.namespace }}/sa/{{ $.Values.deployKF.gateway.serviceAccount }}"
+              - "spiffe://{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.gateway.namespace }}/sa/{{ $.Values.deployKF.gateway.serviceAccount }}"
               {{- end }}
               {{- if $.Values.deployKF.kubeflow.pipelines.enabled }}
               ## allowing traffic from `ml-pipeline-ui` is what allows the user to see KFP object store artifacts,
               ## this is because it proxies the user's requests to `ml-pipeline-ui-artifact` in the profile namespace
-              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
+              - "spiffe://{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
               {{- end }}
       when:
         - key: request.auth.claims[{{ $.Values.deployKF.gateway.groupsClaim }}]
@@ -225,7 +225,7 @@ spec:
               {{- if $.Values.deployKF.kubeflow.pipelines.enabled }}
               ## allowing traffic from `ml-pipeline-ui` is what allows the user to see KFP object store artifacts,
               ## this is because it proxies the user's requests to `ml-pipeline-ui-artifact` in the profile namespace
-              - "{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
+              - "spiffe://{{ $.Values.deployKF.clusterDomain }}/ns/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.namespace }}/sa/{{ $.Values.deployKF.kubeflow.pipelines.pipelineUI.serviceAccount }}"
               {{- end }}
       when:
         - key: request.headers[{{ $.Values.deployKF.kubeflow.useridHeader }}]
