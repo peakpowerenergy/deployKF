@@ -1,0 +1,21 @@
+{{- /* ensure JWT claims are available in each profile namespace */ -}}
+{{- range $index, $profile := .Values.profiles }}
+{{- $profile_name := printf "%s%s" $.Values.profileDefaults.profileNamePrefix $profile.name }}
+---
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: jwt-authn
+  namespace: {{ $profile_name | quote }}
+  labels:
+    helm.sh/chart: {{ include "deploykf-profiles-generator.labels.chart" $ }}
+    app.kubernetes.io/name: {{ include "deploykf-profiles-generator.labels.name" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+spec:
+  jwtRules:
+    - issuer: "https://{{ $.Values.deployKF_helpers.deploykf_gateway.https_endpoint }}/dex"
+      jwksUri: "http://dex.{{ $.Values.deployKF.auth.namespace }}.svc.{{ $.Values.deployKF.clusterDomain }}:5556/dex/keys"
+{{- end }}
+
+
