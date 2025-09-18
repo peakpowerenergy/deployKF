@@ -39,6 +39,9 @@ deployKF:
       enabled: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.tls.enabled | conv.ToBool >}}
       clientsUseHttps: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.tls.clientsUseHttps | conv.ToBool >}}
 
+  kubeflow:
+    groupsClaim: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.groupsClaim | default "groups" | quote >}}
+
 
 ########################################
 ## COMPONENT | generate

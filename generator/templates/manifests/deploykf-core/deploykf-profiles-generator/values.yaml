@@ -2,8 +2,12 @@
 ## SHARED | deploykf-helpers
 ########################################
 deployKF_helpers:
+  deploykf_gateway:
+    http_endpoint: {{< (tmpl.Exec "deploykf_gateway.http_endpoint" .) | quote >}}
+    https_endpoint: {{< (tmpl.Exec "deploykf_gateway.https_endpoint" .) | quote >}}
   deploykf_profiles:
     users_id_mapping: {{< tmpl.Exec "runtime/deploykf_profiles__users_id_mapping_json" >}}
+    groups_id_mapping: {{< tmpl.Exec "runtime/deploykf_profiles__groups_id_mapping_json" >}}
     profiles_users_access_mapping: {{< tmpl.Exec "runtime/deploykf_profiles__profiles_users_access_mapping_json" >}}
     users_profiles_access_mapping: {{< tmpl.Exec "runtime/deploykf_profiles__users_profiles_access_mapping_json" >}}
 
@@ -41,6 +45,10 @@ deployKF:
     namespace: {{< .Values.deploykf_core.deploykf_istio_gateway.namespace | quote >}}
     serviceAccount: {{< .Values.deploykf_core.deploykf_istio_gateway.gatewayDeployment.serviceAccount.name | quote >}}
     emailToLowercase: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.emailToLowercase | conv.ToBool >}}
+    groupsClaim: {{< .Values.deploykf_core.deploykf_istio_gateway.gateway.groupsClaim | quote >}}
+
+  auth:
+    namespace: {{< .Values.deploykf_core.deploykf_auth.namespace | quote >}}
 
 
 ########################################
